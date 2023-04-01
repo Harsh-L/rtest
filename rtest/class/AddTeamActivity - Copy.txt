@@ -1,0 +1,96 @@
+package com.example.completecruddemoapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.text.InputFilter;
+import android.text.Spanned;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+
+public class AddTeamActivity extends AppCompatActivity implements View.OnClickListener {
+
+    Button insertButton;
+    EditText txtTeamName, txtCaptainName, txtTotalPlayers;
+    DBHelper dbHelper;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_add_team);
+        dbHelper = new DBHelper(this);
+        insertButton = findViewById(R.id.btnInsert);
+        txtTeamName = findViewById(R.id.txtTeamName);
+        txtCaptainName = findViewById(R.id.txtTeamCaptain);
+        txtTotalPlayers = findViewById(R.id.txtTotalPlayers);
+        txtTotalPlayers.setFilters(new InputFilter[]{
+                new InputFilter() {
+                    @Override
+                    public CharSequence filter(CharSequence charSequence, int i, int i1, Spanned spanned, int i2, int i3) {
+                        try {
+                            int input = Integer.parseInt(spanned.toString() + charSequence.toString());
+                            if (input >= 0 && input <= 25) {
+                                return null;
+                            }
+                        } catch (NumberFormatException ex) {
+                            //Do Nothing
+                        }
+                        return "";
+                    }
+                }
+        });
+        insertButton.setOnClickListener(this);
+    }
+
+    @Override
+    public void onClick(View view) {
+        if (view == insertButton) {
+            if (validateFields(txtTeamName.getText().toString(), txtCaptainName.getText().toString(), txtTotalPlayers.getText().toString())) {
+                Team team = new Team();
+                team.setTeam_name(txtTeamName.getText().toString());
+                team.setTeam_captain(txtCaptainName.getText().toString());
+                team.setTotal_players(Integer.parseInt(txtTotalPlayers.getText().toString()));
+
+                dbHelper.insertTeam(team);
+                Intent intent = new Intent(this, MainActivity.class);
+                startActivity(intent);
+            } else {
+                //Do Nothing
+            }
+
+        }
+    }
+
+    public boolean validateFields(String teamName, String teamCaptain, String totalPlayers) {
+        //validate team name
+        if (teamName.trim().equals("")) {
+            txtTeamName.setError("Please Enter Team Name");
+            txtTeamName.requestFocus();
+            return false;
+        } else if (teamName.length() >= 50) {
+            txtTeamName.setError("Team Name Can't Be More Than 50 Characters!");
+            txtTeamName.requestFocus();
+            return false;
+        }
+        //validate team captain
+        else if (teamCaptain.trim().equals("")) {
+            txtCaptainName.setError("Please Enter Captain Name");
+            txtCaptainName.requestFocus();
+            return false;
+        } else if (teamCaptain.length() >= 50) {
+            txtCaptainName.setError("Captain Name Can't Be More Than 50 Characters!");
+            txtCaptainName.requestFocus();
+            return false;
+        }
+        //validate total players
+        else if (totalPlayers.equals("")) {
+            txtTotalPlayers.setError("Please Enter Total Players");
+            txtTotalPlayers.requestFocus();
+            return false;
+        } else {
+            return true;
+        }
+    }
+}

@@ -1,0 +1,185 @@
+package com.example.completecruddemoapp;
+
+import android.annotation.SuppressLint;
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.text.InputFilter;
+import android.text.Spanned;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
+import java.util.List;
+
+public class TeamAdapter extends RecyclerView.Adapter<TeamAdapter.ViewHolder> {
+    Context context;
+    int resource;
+    List<Team> teams;
+    DBHelper dbHelper;
+
+    public TeamAdapter(Context context, int resource, List<Team> teams) {
+        this.context = context;
+        this.resource = resource;
+        this.teams = teams;
+        dbHelper = new DBHelper(context);
+    }
+
+    @NonNull
+    @Override
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View teamView = LayoutInflater.from(context).inflate(resource, parent, false);
+        ViewHolder viewHolder = new ViewHolder(teamView);
+        return viewHolder;
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull ViewHolder holder, @SuppressLint("RecyclerView") int position) {
+        Team team = teams.get(position);
+        holder.txtTeamName.setText(team.getTeam_name());
+        holder.txtTeamCaptain.setText(team.getTeam_captain());
+        holder.txtTotalPlayers.setText(String.valueOf(team.getTotal_players()));
+
+        holder.btnEdit.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                View dailogView = LayoutInflater.from(context).inflate(R.layout.edit_layout, null);
+
+                EditText editTxtTeamName = dailogView.findViewById(R.id.txtEditTeamName);
+                EditText editTxtTeamCaptain = dailogView.findViewById(R.id.txtEditTeamCaptain);
+                EditText editTxtTotalPlayers = dailogView.findViewById(R.id.txtEditTotalPlayers);
+                Button btnUpdate = dailogView.findViewById(R.id.btnUpdate);
+                Button btnCancel = dailogView.findViewById(R.id.btnCancel);
+
+
+                editTxtTeamName.setText(team.getTeam_name());
+                editTxtTotalPlayers.setText(String.valueOf(team.getTotal_players()));
+                editTxtTeamCaptain.setText(team.getTeam_captain());
+
+                editTxtTotalPlayers.setFilters(new InputFilter[]{
+                        new InputFilter() {
+                            @Override
+                            public CharSequence filter(CharSequence charSequence, int i, int i1, Spanned spanned, int i2, int i3) {
+                                try {
+                                    int input = Integer.parseInt(spanned.toString() + charSequence.toString());
+                                    if (input >= 0 && input <= 25) {
+                                        return null;
+                                    }
+                                } catch (NumberFormatException ex) {
+                                    //Do Nothing
+                                }
+                                return "";
+                            }
+                        }
+                });
+
+                builder.setView(dailogView);
+                AlertDialog dialog = builder.create();
+
+                btnUpdate.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        team.setTeam_captain(editTxtTeamCaptain.getText().toString());
+                        team.setTeam_name(editTxtTeamName.getText().toString());
+                        team.setTotal_players(Integer.parseInt(editTxtTotalPlayers.getText().toString()));
+                        if (validateFields(editTxtTeamName, editTxtTeamName.getText().toString(), editTxtTeamCaptain, editTxtTeamCaptain.getText().toString(), editTxtTotalPlayers, editTxtTotalPlayers.getText().toString())) {
+                            dbHelper.updateTeam(team);
+                            notifyItemChanged(position);
+                            dialog.dismiss();
+                        } else {
+                            //Do Nothing
+                        }
+                    }
+                });
+
+                btnCancel.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        dialog.dismiss();
+                    }
+                });
+                dialog.show();
+            }
+        });
+
+        holder.btnDelete.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                builder.setTitle("Delete Team").setMessage("Are You Sure To Delete Team " + team.getTeam_name() + " ?").setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dbHelper.deleteTeam(team);
+                        teams.remove(team);
+                        notifyItemRemoved(position);
+                    }
+                }).setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dialogInterface.dismiss();
+                    }
+                }).show();
+
+            }
+        });
+    }
+
+    @Override
+    public int getItemCount() {
+        return this.teams.size();
+    }
+
+    public class ViewHolder extends RecyclerView.ViewHolder {
+        TextView txtTeamName, txtTeamCaptain, txtTotalPlayers;
+        ImageButton btnEdit, btnDelete;
+
+        public ViewHolder(@NonNull View itemView) {
+            super(itemView);
+            txtTeamName = itemView.findViewById(R.id.txtTeamName);
+            txtTeamCaptain = itemView.findViewById(R.id.txtTeamCaptain);
+            txtTotalPlayers = itemView.findViewById(R.id.txtTotalPlayers);
+            btnDelete = itemView.findViewById(R.id.btnDelete);
+            btnEdit = itemView.findViewById(R.id.btnEdit);
+        }
+    }
+
+    public boolean validateFields(EditText txtTeamName, String teamName, EditText txtCaptainName, String teamCaptain, EditText txtTotalPlayers, String totalPlayers) {
+        //validate team name
+        if (teamName.trim().equals("")) {
+            txtTeamName.setError("Please Enter Team Name");
+            txtTeamName.requestFocus();
+            return false;
+        } else if (teamName.length() >= 50) {
+            txtTeamName.setError("Team Name Can't Be More Than 50 Characters!");
+            txtTeamName.requestFocus();
+            return false;
+        }
+        //validate team captain
+        else if (teamCaptain.trim().equals("")) {
+            txtCaptainName.setError("Please Enter Captain Name");
+            txtCaptainName.requestFocus();
+            return false;
+        } else if (teamCaptain.length() >= 50) {
+            txtCaptainName.setError("Captain Name Can't Be More Than 50 Characters!");
+            txtCaptainName.requestFocus();
+            return false;
+        }
+        //validate total players
+        else if (totalPlayers.equals("")) {
+            txtTotalPlayers.setError("Please Enter Total Players");
+            txtTotalPlayers.requestFocus();
+            return false;
+        } else {
+            return true;
+        }
+    }
+}
